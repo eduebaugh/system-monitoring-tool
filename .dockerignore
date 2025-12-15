@@ -1,0 +1,21 @@
+```dockerignore
+# Virtual environments
+venv/
+__pycache__/
+*.pyc
+
+# Local databases & outputs
+*.db
+*.csv
+
+# Git
+.git
+.gitignore
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Editor files
+.vscode/
+.idea/
