@@ -1,22 +1,50 @@
 import streamlit as st
 import pandas as pd
 import sqlite3
+import os
 
+st.set_page_config(page_title="System Monitoring Dashboard", layout="wide")
 st.title("System Monitoring Dashboard")
 
-conn = sqlite3.connect("metrics.db")
+# Absolute path to database
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+DB_PATH = os.path.join(BASE_DIR, "system_metrics.db")
+
+# --- Safety checks ---
+if not os.path.exists(DB_PATH):
+    st.error("Database not found. Please run collector.py first.")
+    st.stop()
+
+conn = sqlite3.connect(DB_PATH)
+
+# Check if table exists
+tables = pd.read_sql(
+    "SELECT name FROM sqlite_master WHERE type='table' AND name='metrics';",
+    conn
+)
+
+if tables.empty:
+    st.error("'metrics' table not found. Run collector.py to generate data.")
+    conn.close()
+    st.stop()
+
+# Load data
 df = pd.read_sql("SELECT * FROM metrics", conn)
+conn.close()
 
-st.subheader("Current Metrics")
-st.metric("CPU Usage (%)", round(df["cpu"].iloc[-1], 2))
-st.metric("Memory Usage (%)", round(df["memory"].iloc[-1], 2))
-st.metric("Disk Usage (%)", round(df["disk"].iloc[-1], 2))
+if df.empty:
+    st.warning("No data yet. Let collector.py run longer.")
+    st.stop()
 
-st.subheader("CPU Usage Over Time")
+# --- Convert timestamp ---
+df["timestamp"] = pd.to_datetime(df["timestamp"])
+
+# --- Charts ---
+st.subheader("CPU Usage (%)")
 st.line_chart(df.set_index("timestamp")["cpu"])
 
-st.subheader("Memory Usage Over Time")
+st.subheader("Memory Usage (%)")
 st.line_chart(df.set_index("timestamp")["memory"])
 
-st.subheader("Disk Usage Over Time")
+st.subheader("Disk Usage (%)")
 st.line_chart(df.set_index("timestamp")["disk"])

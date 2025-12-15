@@ -1,12 +1,16 @@
 import psutil
-import time
 import sqlite3
+import time
 from datetime import datetime
+import os
 
-conn = sqlite3.connect('system_metrics.db')
-cursor = conn.cursor()
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+DB_PATH = os.path.join(BASE_DIR, "system_metrics.db")
 
-cursor.execute("""
+conn = sqlite3.connect(DB_PATH)
+cur = conn.cursor()
+
+cur.execute("""
 CREATE TABLE IF NOT EXISTS metrics (
     timestamp TEXT,
     cpu REAL,
@@ -14,24 +18,25 @@ CREATE TABLE IF NOT EXISTS metrics (
     disk REAL
 )
 """)
+conn.commit()
 
-print("Starting system monitoring... Press Ctrl+C to stop")
+print("Collecting system metrics... Press Ctrl+C to stop.")
 
 try:
     while True:
+        timestamp = datetime.now().isoformat()
         cpu = psutil.cpu_percent(interval=1)
         memory = psutil.virtual_memory().percent
-        disk = psutil.disk_usage('/').percent
-        timestamp = datetime.now().isoformat()
+        disk = psutil.disk_usage("/").percent
 
-        cursor.execute(
+        cur.execute(
             "INSERT INTO metrics VALUES (?, ?, ?, ?)",
             (timestamp, cpu, memory, disk)
         )
         conn.commit()
 
         print(f"{timestamp} | CPU: {cpu}% | MEM: {memory}% | DISK: {disk}%")
-        time.sleep(5)
+        time.sleep(1)
 
 except KeyboardInterrupt:
     print("\nMonitoring stopped by user.")
